@@ -12,10 +12,10 @@ from MLTS.ggv_constr import GGVConstr
 class MLTS:
 
     X_scale = {"n": 8, "Xi": 0.5, "V": 60, "ax": 15, "ay": 10}
-    U_scale = {"ax_ctrl": 15, "ay_ctrl": 10, "ax_dot_ctrl": 600, "ay_dot_ctrl": 100}
+    U_scale = {"ax_ctrl": 15, "ay_ctrl": 10, "ax_dot_ctrl": 15, "ay_dot_ctrl": 10}
 
     # Weights of the control rate penalty
-    target_weight = {"w__T": 1.0, "w__ax": 4.5e-3, "w__ay": 5e-2}
+    target_weight = {"w__T": 1.0, "w__ax": 1e-3, "w__ay": 1e-3}
 
     # Default IPOPT options, updated with the ones passed to solution()
     ipopt_default = {

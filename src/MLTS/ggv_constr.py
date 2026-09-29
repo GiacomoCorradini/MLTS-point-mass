@@ -77,7 +77,7 @@ class GGVConstr:
         return ax, ay
 
     def _boundary_from_fwbw(self, ggv: dict, n_ay: int = 41):
-        """Tables ax_max(ay, V), ax_min(ay, V), ay_max(V): ax_min -> wall at ay_max -> ax_max."""
+        """Tables ax_max(ay, V), ax_min(ay, V), ay_max(V): ax_min -> tip (ay_max, 0) -> ax_max."""
 
         lon, lat = ggv["longitudinal_acceleration"], ggv["lateral_acceleration"]
         ay_tab = np.array(lon["lateral_acceleration"])
@@ -91,21 +91,37 @@ class GGVConstr:
         v_lat = np.array(lat["longitudinal_velocity"])
         ay_max_lat = np.array(lat["positive_lateral_acceleration"])
 
+        # Each table row on s = ay / ay_max in [0, 1]: cells outside the
+        # envelope (stored as 0) replaced by the tip ax = 0 at s = 1, so the
+        # boundary scales with ay_max(V) instead of snapping to the ay grid
+        s = np.linspace(0.0, 1.0, n_ay)
+        ay_max_tab = np.interp(v_tab, v_lat, ay_max_lat)
+        v_rows, lower_rows, upper_rows = [], [], []
+        for v, a, lo, up in zip(v_tab, ay_max_tab, ax_min_tab, ax_max_tab):
+            k = (up - lo > 1e-3) & (ay_tab >= 0.0) & (ay_tab < a)
+            if not k.any():  # no envelope (e.g. beyond top speed)
+                continue
+            s_k = np.append(ay_tab[k], a) / a
+            # |ax| limits non-increasing with ay (removes solver glitches)
+            lo_k = np.maximum.accumulate(np.append(lo[k], 0.0))
+            up_k = np.minimum.accumulate(np.append(up[k], 0.0))
+            v_rows.append(v)
+            lower_rows.append(np.interp(s, s_k, lo_k))
+            upper_rows.append(np.interp(s, s_k, up_k))
+        v_rows, lower_rows, upper_rows = map(np.array, (v_rows, lower_rows, upper_rows))
+
         ax_rows, ay_rows, v_grid = [], [], []
         for v, ay_max in zip(v_lat, ay_max_lat):
-            # Tables interpolated (linearly) at this speed, then along ay
-            ax_max_v = [np.interp(v, v_tab, col) for col in ax_max_tab.T]
-            ax_min_v = [np.interp(v, v_tab, col) for col in ax_min_tab.T]
-            ay_b = np.linspace(0.0, ay_max, n_ay)
-            lower = np.interp(ay_b, ay_tab, ax_min_v)
-            upper = np.interp(ay_b, ay_tab, ax_max_v)
+            # Rows interpolated (linearly) at this speed
+            lower = [np.interp(v, v_rows, col) for col in lower_rows.T]
+            upper = [np.interp(v, v_rows, col) for col in upper_rows.T]
 
             # Skip degenerate speeds (envelope collapsed to a point)
             if ay_max < 1e-3 or upper[0] - lower[0] < 1e-3:
                 continue
             v_grid.append(v)
             ax_rows.append(np.concatenate((lower, upper[::-1])))
-            ay_rows.append(np.concatenate((ay_b, ay_b[::-1])))
+            ay_rows.append(np.concatenate((s, s[::-1])) * ay_max)
 
         return np.array(v_grid), ax_rows, ay_rows
 
