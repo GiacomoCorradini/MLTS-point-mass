@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "MLTS-point-mass"
+version = "0.1.0"
+description = "Minimum lap time simulation (OCP) of a point mass model with generic GGV constraints, in CasADi"
+authors = [{ name = "Giacomo Corradini", email = "giacomo.corradini@unitn.it" }]
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "numpy>=2.0",
+    "pandas",
+    "matplotlib",
+    "casadi",
+    "pytelemsys @ git+https://github.com/GiacomoCorradini/pytelemsys.git",
+]
+
+[project.optional-dependencies]
+examples = ["pyyaml"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["MLTS*"]
