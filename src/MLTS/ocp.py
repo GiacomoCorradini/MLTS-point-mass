@@ -15,7 +15,7 @@ class MLTS:
     U_scale = {"ax_ctrl": 15, "ay_ctrl": 10, "ax_dot_ctrl": 15, "ay_dot_ctrl": 10}
 
     # Weights of the control rate penalty
-    target_weight = {"w__T": 1.0, "w__ax": 1e-3, "w__ay": 1e-3}
+    target_weight = {"w__T": 1.0, "w__ax": 1e-5, "w__ay": 1e-5}
 
     # Default IPOPT options, updated with the ones passed to solution()
     ipopt_default = {

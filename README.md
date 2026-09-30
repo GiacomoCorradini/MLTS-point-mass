@@ -11,7 +11,7 @@ pip install -e .
 ## Usage
 
 ```bash
-python examples/run_mlts.py examples/tracks/Catalunya.txt   # --ggv, --vehicle, --step
+python examples/run_mlts.py examples/tracks/Catalunya.txt   # --ggv, --vehicle, --step, --save sol.csv
 python examples/plot_ggv.py
 ```
 
