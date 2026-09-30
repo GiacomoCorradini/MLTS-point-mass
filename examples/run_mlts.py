@@ -36,6 +36,7 @@ if __name__ == "__main__":
         "--vehicle", type=str, default=os.path.join(data_dir, "vehicle.json")
     )
     parser.add_argument("--step", type=float, default=1.0, help="Mesh step [m].")
+    parser.add_argument("--save", type=str, help="Save the solution to a .csv file.")
     args = parser.parse_args()
 
     track_data = TrackData(args.track)
@@ -45,8 +46,16 @@ if __name__ == "__main__":
     mlts = MLTS(track_data, vehicle_data, ggv_data)
 
     # Initial guess (n, Xi, V, ax, ay): constant state
-    x0 = np.array([0.0, 0.0, 30.0, 0.0, 0.0])
+    x0 = np.array([4.0, 0.0, 30.0, 0.0, 0.0])
     sol = mlts.solution(x0, step_size=args.step)
+
+    # Save the solution: one row per mesh node
+    if args.save:
+        import pandas as pd
+
+        arrays = {k: v for k, v in sol.items() if isinstance(v, np.ndarray)}
+        pd.DataFrame(arrays).to_csv(args.save, index=False)
+        print(f"Solution saved to {args.save}")
 
     fig = plt.figure()
     ax = fig.add_subplot(121, projection="3d")
