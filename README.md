@@ -22,7 +22,23 @@ mlts = MLTS(track, vehicle, ggv, ggv_scales=None)
 sol = mlts.solution(x0=[0, 0, 30, 0, 0], step_size=1.0)  # initial guess [n, Xi, V, ax, ay]
 ```
 
-`sol`: solver outcome (`success`, `status`, `iterations`, `solve_time`), states and `time` along `s`, trajectory (`x_trj`, `y_trj`, `z_trj`).
+`sol` (dict, arrays sampled on the mesh along `s`):
+
+| Field | Description |
+| --- | --- |
+| `success`, `status`, `iterations`, `solve_time` | IPOPT outcome (last iterate returned if not converged) |
+| `abscissa` | curvilinear abscissa `s` of the centreline [m] |
+| `distance` | distance travelled along the trajectory [m] |
+| `time` | lap time [s] |
+| `n` | lateral offset from the centreline [m] |
+| `Xi` | heading relative to the centreline [rad] |
+| `kappa` | centreline curvature [1/m] |
+| `kappa_trj` | trajectory curvature `ay / V²` [1/m] |
+| `yaw_rate` | `ay / V` [rad/s] |
+| `V`, `ax`, `ay` | speed [m/s], longitudinal and lateral acceleration [m/s²] |
+| `x_trj`, `y_trj`, `z_trj` | optimal trajectory [m] |
+| `x_mid_line`, `y_mid_line`, `z_mid_line` | centreline [m] |
+| `x_margin_L/R`, `y_margin_L/R`, `z_margin_L/R` | left / right track borders [m] |
 
 ## Inputs
 
