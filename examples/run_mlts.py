@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from pytelemsys.pytrack import TrackData
 from MLTS import MLTS
 
-data_dir = os.path.join(os.path.dirname(__file__), "vehicle")
+data_dir = os.path.join(os.path.dirname(__file__), "vehicle_1")
 
 
 def load_dict(path: str) -> dict:
@@ -109,7 +109,22 @@ if __name__ == "__main__":
     ax.grid(True)
 
     ax = fig.add_subplot(122, projection="3d")
-    ax.plot(sol["ay"], sol["ax"], sol["V"])
+    v_range = np.linspace(mlts.ggv.v_min, mlts.ggv.v_max, 30)
+    AY, AX = map(np.array, zip(*(mlts.ggv.boundary(v) for v in v_range)))
+    V = np.repeat(v_range[:, None], AY.shape[1], axis=1)
+    ax.plot_wireframe(
+        AY,
+        AX,
+        V,
+        rstride=2,
+        cstride=10,
+        color="red",
+        linewidth=0.5,
+        alpha=0.5,
+        label="GGV constraint",
+    )
+    ax.plot(sol["ay"], sol["ax"], sol["V"], "b-", label="MLTS")
+    ax.legend()
     ax.set_xlabel(r"$a_y (m/s^2)$")
     ax.set_ylabel(r"$a_x (m/s^2)$")
     ax.set_zlabel(r"V (m/s)")

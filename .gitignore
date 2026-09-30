@@ -6,4 +6,3 @@ dist/
 .venv/
 .DS_Store
 *.csv
-!examples/vehicle/*.csv
