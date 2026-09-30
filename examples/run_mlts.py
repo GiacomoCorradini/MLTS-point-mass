@@ -46,7 +46,7 @@ if __name__ == "__main__":
     mlts = MLTS(track_data, vehicle_data, ggv_data)
 
     # Initial guess (n, Xi, V, ax, ay): constant state
-    x0 = np.array([4.0, 0.0, 30.0, 0.0, 0.0])
+    x0 = np.array([0.0, 0.0, 30.0, 0.0, 0.0])
     sol = mlts.solution(x0, step_size=args.step)
 
     # Save the solution: one row per mesh node
@@ -75,8 +75,20 @@ if __name__ == "__main__":
         linewidth=3,
         label="MLTS trajectory",
     )
-    ax.plot(sol["x_L"], sol["y_L"], sol["z_L"], "k-", label="Track left kerb")
-    ax.plot(sol["x_R"], sol["y_R"], sol["z_R"], "k-", label="Track right kerb")
+    ax.plot(
+        sol["x_margin_L"],
+        sol["y_margin_L"],
+        sol["z_margin_L"],
+        "k-",
+        label="Track left margin",
+    )
+    ax.plot(
+        sol["x_margin_R"],
+        sol["y_margin_R"],
+        sol["z_margin_R"],
+        "k-",
+        label="Track right margin",
+    )
     ax.set_aspect("equal", "datalim")
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Y (m)")
@@ -84,7 +96,7 @@ if __name__ == "__main__":
     ax.legend()
 
     ax = fig.add_subplot(222)
-    ax.plot(sol["s"], sol["n"], label="MLTS lateral deviation")
+    ax.plot(sol["abscissa"], sol["n"], label="MLTS lateral deviation")
     ax.plot(
         mlts.track_data["s_values"],
         mlts.track_data["n_l"](mlts.track_data["s_values"]),
@@ -105,14 +117,14 @@ if __name__ == "__main__":
     ax.legend()
 
     ax = fig.add_subplot(224)
-    ax.plot(sol["s"], sol["Xi"])
+    ax.plot(sol["abscissa"], sol["Xi"])
     ax.set_xlabel("s (m)")
     ax.set_ylabel(r"$\Xi$ (rad)")
     ax.grid(True)
 
     fig = plt.figure()
     ax = fig.add_subplot(121)
-    ax.plot(sol["s"], sol["V"])
+    ax.plot(sol["abscissa"], sol["V"])
     ax.set_xlabel("s (m)")
     ax.set_ylabel("V (m/s)")
     ax.grid(True)

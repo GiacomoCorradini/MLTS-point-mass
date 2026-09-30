@@ -163,43 +163,58 @@ class MLTS:
 
         # Road info
         road = lambda key: np.array(self.track_data[key](s_values)).squeeze()
-        x_M, y_M, z_M = road("x"), road("y"), road("z")
+        x_mid_line, y_mid_line, z_mid_line = road("x"), road("y"), road("z")
 
         # Trajectory in cartesian coordinates
         x_trj, y_trj, z_trj = darboux_to_cartesian(
-            x_M,
-            y_M,
-            z_M,
+            x_mid_line,
+            y_mid_line,
+            z_mid_line,
             road("theta"),
             road("banking"),
             road("slope"),
             x_sol[state_idx["n"], :],
         )
 
+        # Travelled distance along the trajectory
+        ds_trj = np.sqrt(
+            np.diff(x_trj) ** 2 + np.diff(y_trj) ** 2 + np.diff(z_trj) ** 2
+        )
+        distance = np.concatenate(([0.0], np.cumsum(ds_trj)))
+
+        # Yaw rate: psi_dot = (Xi' + kappa) * s_dot = ay / V
+        yaw_rate = x_sol[state_idx["ay"], :] / x_sol[state_idx["V"], :]
+
+        # Trajectory curvature: kappa_trj = psi_dot / V = ay / V^2
+        kappa_trj = yaw_rate / x_sol[state_idx["V"], :]
+
         print(f"Total time to complete the track: {t_values[-1]:.2f} seconds")
 
         return {
             **solver_info,
-            "s": s_values,
+            "abscissa": s_values,
+            "distance": distance,
             "time": t_values,
             "n": x_sol[state_idx["n"], :],
             "kappa": road("rho"),
+            "kappa_trj": kappa_trj,
             "Xi": x_sol[state_idx["Xi"], :],
+            "yaw_rate": yaw_rate,
             "V": x_sol[state_idx["V"], :],
             "ax": x_sol[state_idx["ax"], :],
             "ay": x_sol[state_idx["ay"], :],
             "x_trj": np.array(x_trj).squeeze(),
             "y_trj": np.array(y_trj).squeeze(),
             "z_trj": np.array(z_trj).squeeze(),
-            "x_M": x_M,
-            "y_M": y_M,
-            "z_M": z_M,
-            "x_L": road("x_L"),
-            "y_L": road("y_L"),
-            "z_L": road("z_L"),
-            "x_R": road("x_R"),
-            "y_R": road("y_R"),
-            "z_R": road("z_R"),
+            "x_mid_line": x_mid_line,
+            "y_mid_line": y_mid_line,
+            "z_mid_line": z_mid_line,
+            "x_margin_L": road("x_margin_L"),
+            "y_margin_L": road("y_margin_L"),
+            "z_margin_L": road("z_margin_L"),
+            "x_margin_R": road("x_margin_R"),
+            "y_margin_R": road("y_margin_R"),
+            "z_margin_R": road("z_margin_R"),
         }
 
     #   ____       _            _
@@ -277,12 +292,12 @@ class MLTS:
             "rho": spline("rho", track.track.curvature),
             "n_l": spline("n_l", track.track.width_no_kerbs_L),
             "n_r": spline("n_r", -track.track.width_no_kerbs_R),
-            "x_L": spline("x_L", track.track.x_margin_no_kerb_L),
-            "y_L": spline("y_L", track.track.y_margin_no_kerb_L),
-            "z_L": spline("z_L", track.track.z_margin_no_kerb_L),
-            "x_R": spline("x_R", track.track.x_margin_no_kerb_R),
-            "y_R": spline("y_R", track.track.y_margin_no_kerb_R),
-            "z_R": spline("z_R", track.track.z_margin_no_kerb_R),
+            "x_margin_L": spline("x_margin_L", track.track.x_margin_no_kerb_L),
+            "y_margin_L": spline("y_margin_L", track.track.y_margin_no_kerb_L),
+            "z_margin_L": spline("z_margin_L", track.track.z_margin_no_kerb_L),
+            "x_margin_R": spline("x_margin_R", track.track.x_margin_no_kerb_R),
+            "y_margin_R": spline("y_margin_R", track.track.y_margin_no_kerb_R),
+            "z_margin_R": spline("z_margin_R", track.track.z_margin_no_kerb_R),
         }
 
     def _get_vehicle_data(self, data: dict) -> dict:
