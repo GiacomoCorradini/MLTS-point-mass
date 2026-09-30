@@ -6,3 +6,4 @@ dist/
 .venv/
 .DS_Store
 *.csv
+!examples/vehicle_3/ggv_envelope.csv
