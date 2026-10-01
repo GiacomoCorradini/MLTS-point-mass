@@ -4,8 +4,8 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-import MLTS.define_mesh as mesh
-from MLTS import read_track
+import mlts_point_mass.define_mesh as mesh
+from mlts_point_mass import read_track
 
 tracks_dir = os.path.join(os.path.dirname(__file__), "tracks")
 

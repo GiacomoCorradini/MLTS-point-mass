@@ -16,10 +16,19 @@ python examples/plot_ggv.py
 ```
 
 ```python
-from MLTS import MLTS
+from mlts_point_mass import MLTS
 
 mlts = MLTS(track, vehicle, ggv, ggv_scales=None)
-sol = mlts.solution(x0=[0, 0, 30, 0, 0], step_size=1.0)  # initial guess [n, Xi, V, ax, ay]
+sol = mlts.solution(x0=[0, 0, 30, 0, 0])  # initial guess [n, Xi, V, ax, ay]
+
+# Mesh: "uniform" (default, step_size = 1 m), "dense_start_end" or "time_uniform",
+# mesh_options are the arguments of the functions in mlts_point_mass.define_mesh
+sol = mlts.solution(
+    x0=[0, 0, 30, 0, 0],
+    mesh_type="dense_start_end",
+    mesh_options={"coarse_step": 5.0, "dense_step": 1.0, "dense_length": 200.0},
+    weights={"w__ax": 1e-4},  # cost weights: w__T (lap time), w__ax, w__ay (control rate)
+)
 ```
 
 `sol` (dict, arrays sampled on the mesh along `s`):
@@ -46,7 +55,7 @@ sol = mlts.solution(x0=[0, 0, 30, 0, 0], step_size=1.0)  # initial guess [n, Xi,
 - **vehicle** (dict): `W_total` width [m], `v_max` [m/s]; optional `v_min` (5.0), `tau_ax`, `tau_ay` (0.03 s).
 - **ggv**, either:
   - CSV / `DataFrame` with columns `V, ax, ay`: boundary samples at each speed (symmetric in `ay`);
-  - FWBW dict: tables `ax_max(ay, V)`, `ax_min(ay, V)`, `ay_max(V)`, see [ggv_envelope.json](examples/vehicle/ggv_envelope.json).
+  - FWBW dict: tables `ax_max(ay, V)`, `ax_min(ay, V)`, `ay_max(V)`, see [ggv_envelope.json](https://github.com/GiacomoCorradini/MLTS-point-mass/blob/main/examples/vehicle_1/ggv_envelope.json).
 - **ggv_scales**: grip scaling `[mu]`, `[mu_ax, mu_ay]` or `[mu_ax_max, mu_ax_min, mu_ay]`.
 
 The GGV constraint is `(rho / r)^2 <= 1`, with `rho` the distance of `(ax, ay)` from the diagram centre and `r` that of the boundary in the same direction.

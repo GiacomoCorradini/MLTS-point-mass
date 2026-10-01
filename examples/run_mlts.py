@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from MLTS import MLTS, read_track
+from mlts_point_mass import MLTS, read_track
 
 data_dir = os.path.join(os.path.dirname(__file__), "vehicle_1")
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     # Initial guess (n, Xi, V, ax, ay): constant state
     x0 = np.array([0.0, 0.0, 30.0, 0.0, 0.0])
-    sol = mlts.solution(x0, step_size=args.step)
+    sol = mlts.solution(x0, mesh_options={"step_size": args.step})
 
     # Save the solution: one row per mesh node
     if args.save:

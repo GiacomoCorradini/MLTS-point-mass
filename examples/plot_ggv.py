@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from MLTS import GGVConstr
+from mlts_point_mass import GGVConstr
 
 data_dir = os.path.join(os.path.dirname(__file__))
 

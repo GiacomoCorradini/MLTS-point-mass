@@ -5,6 +5,12 @@ def build_uniform_spatial_mesh(
     abscissa: np.ndarray | list,
     step_size: float,
 ) -> tuple[np.ndarray, int]:
+    """Uniform mesh with cells of about step_size.
+
+    :param abscissa: track abscissa in m.
+    :param step_size: cell length in m.
+    :return: mesh nodes and number of cells.
+    """
 
     if step_size <= 0:
         raise ValueError("step_size must be positive")
@@ -29,6 +35,14 @@ def build_dense_start_end_mesh(
     dense_step: float,
     dense_length: float = 50.0,
 ) -> tuple[np.ndarray, int]:
+    """Mesh dense close to the start and the end of the track, coarse elsewhere.
+
+    :param abscissa: track abscissa in m.
+    :param coarse_step: cell length far from start and end in m.
+    :param dense_step: cell length close to start and end in m.
+    :param dense_length: length of the dense regions in m, defaults to 50.
+    :return: mesh nodes and number of cells.
+    """
 
     if dense_step <= 0 or coarse_step <= 0:
         raise ValueError("dense_step and coarse_step must be positive")
@@ -70,6 +84,14 @@ def build_dense_start_end_mesh(
 def build_time_uniform_mesh(
     abscissa: np.ndarray | list, curvature: np.ndarray | list, mesh_cfg: dict
 ) -> tuple[np.ndarray, int]:
+    """Mesh with cells of about dt seconds along a reference speed profile.
+
+    :param abscissa: track abscissa in m.
+    :param curvature: track curvature in 1/m.
+    :param mesh_cfg: dt, hmax, maxacc, minacc, curvature_velocity; optional vmin,
+        vmax (see examples/plot_mesh.py).
+    :return: mesh nodes and number of cells.
+    """
 
     abscissa = np.asarray(abscissa, dtype=float)
     curvature = np.asarray(curvature, dtype=float)
@@ -89,9 +111,13 @@ def build_time_uniform_mesh(
     v_sat_min = mesh_cfg.get("vmin", 0.0)
     v_sat_max = min(mesh_cfg.get("vmax", np.inf), h_max / dt)
     if v_sat_min < 0 or v_sat_min >= v_sat_max:
-        raise ValueError("vmin must be non-negative and lower than min(vmax, hmax / dt)")
+        raise ValueError(
+            "vmin must be non-negative and lower than min(vmax, hmax / dt)"
+        )
 
-    curvature_velocity_map = sorted(mesh_cfg["curvature_velocity"], key=lambda p: p["k"])
+    curvature_velocity_map = sorted(
+        mesh_cfg["curvature_velocity"], key=lambda p: p["k"]
+    )
 
     # --- curvature -> velocity map ---
     # Linear interpolation, held constant outside the knots: a cubic spline
@@ -103,7 +129,9 @@ def build_time_uniform_mesh(
     v_limit = np.interp(np.abs(curvature), curvature_knots, velocity_knots)
     v_limit = np.clip(v_limit, v_sat_min, v_sat_max)
     if np.any(v_limit <= 0):
-        raise ValueError("curvature_velocity must map to positive velocities (or set vmin > 0)")
+        raise ValueError(
+            "curvature_velocity must map to positive velocities (or set vmin > 0)"
+        )
 
     # --- forward pass: acceleration limit (constant acceleration over ds) ---
     for i in range(1, len(abscissa)):

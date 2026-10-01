@@ -15,6 +15,12 @@ class GGVConstr:
     def __init__(
         self, ggv: dict | pd.DataFrame, scales: np.ndarray | list | None = None
     ) -> None:
+        """Build the GGV envelope.
+
+        :param ggv: samples (V, ax, ay) or FWBW tables.
+        :param scales: grip scales [mu], [mu_ax, mu_ay] or
+            [mu_ax_max, mu_ax_min, mu_ay], defaults to 1.
+        """
 
         if "longitudinal_acceleration" in ggv and "lateral_acceleration" in ggv:
             v_grid, ax, ay = self._boundary_from_fwbw(ggv)
@@ -222,6 +228,7 @@ class GGVConstr:
     #  |_|   |_|\___/ \__|
 
     def plot(self, n_v: int = 40) -> None:
+        """Plot the 3D GGV envelope, sampled at n_v speeds."""
         import matplotlib.pyplot as plt
 
         v_range = np.linspace(self.v_min, self.v_max, n_v)

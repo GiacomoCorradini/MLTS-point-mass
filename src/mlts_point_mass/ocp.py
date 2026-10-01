@@ -3,17 +3,19 @@ import numpy as np
 import pandas as pd
 import casadi as ca
 
-import MLTS.define_mesh as mesh
-from MLTS.ggv_constr import GGVConstr
-from MLTS.track import read_track, darboux_to_cartesian
+import mlts_point_mass.define_mesh as mesh
+from mlts_point_mass.ggv_constr import GGVConstr
+from mlts_point_mass.track import read_track, darboux_to_cartesian
 
 
 class MLTS:
+    """Minimum lap time of a point mass with a G-G-V constraint."""
 
     X_scale = {"n": 8, "Xi": 0.5, "V": 60, "ax": 15, "ay": 10}
     U_scale = {"ax_ctrl": 15, "ay_ctrl": 10, "ax_dot_ctrl": 15, "ay_dot_ctrl": 10}
 
-    # Weights of the control rate penalty
+    # Default cost weights (lap time, control rate penalty), updated with the
+    # ones passed to solution()
     target_weight = {"w__T": 1.0, "w__ax": 1e-5, "w__ay": 1e-5}
 
     # Default IPOPT options, updated with the ones passed to solution()
@@ -31,16 +33,44 @@ class MLTS:
         ggv_data: dict,
         ggv_scales: np.ndarray | list | None = None,
     ):
+        """Load the track, vehicle and GGV data.
+
+        :param track: track file path or DataFrame (see read_track).
+        :param vehicle_data: W_total [m], v_max [m/s]; optional v_min, tau_ax, tau_ay.
+        :param ggv_data: GGV samples (V, ax, ay) or FWBW tables.
+        :param ggv_scales: grip scales [mu], [mu_ax, mu_ay] or
+            [mu_ax_max, mu_ax_min, mu_ay], defaults to 1.
+        """
         self.track_data = self._load_racetrack(track)
         self.veh_data = self._get_vehicle_data(vehicle_data)
         self.ggv = GGVConstr(ggv_data, scales=ggv_scales)
 
-    def solution(self, x0, step_size=1.0, ipopt_options=None):
+    def solution(
+        self,
+        x0,
+        mesh_type="uniform",
+        mesh_options=None,
+        weights=None,
+        ipopt_options=None,
+    ):
+        """Solve the minimum lap time problem.
+
+        :param x0: constant initial guess [n, Xi, V, ax, ay].
+        :param mesh_type: "uniform", "dense_start_end" or "time_uniform".
+        :param mesh_options: arguments of the mesh function (see define_mesh),
+            defaults to step_size = 1 m for the uniform mesh.
+        :param weights: cost weights w__T, w__ax, w__ay, merged with target_weight.
+        :param ipopt_options: IPOPT options, merged with ipopt_default.
+        :return: solution sampled on the mesh (see README).
+        """
+
+        # Cost weights
+        weights = {**self.target_weight, **(weights or {})}
+        if weights.keys() != self.target_weight.keys():
+            raise ValueError(f"weights must be among {list(self.target_weight)}")
 
         # Define mesh
-        s_values, N = mesh.build_uniform_spatial_mesh(
-            self.track_data["s_values"], step_size
-        )
+        s_values, N = self._build_mesh(mesh_type, mesh_options or {})
         print(f"Number of mesh points: {N}")
 
         # Define the dynamics model
@@ -49,6 +79,13 @@ class MLTS:
         # States and controls
         state_idx = {name: i for i, name in enumerate(model.x_names)}
         control_idx = {name: i for i, name in enumerate(model.u_names)}
+
+        # Initial guess x0 = [n, Xi, V, ax, ay]
+        x0 = np.asarray(x0, dtype=float)
+        if x0.shape != (model.nx,):
+            raise ValueError(f"x0 must have {model.nx} elements: {model.x_names}")
+        if x0[state_idx["V"]] <= 0:
+            raise ValueError("x0: the initial guess of V must be positive")
 
         # Scale vectors
         x_scale_vec = ca.DM([self.X_scale[name] for name in model.x_names])
@@ -77,7 +114,7 @@ class MLTS:
             x_cell = (x_unscaled[:, k] + x_unscaled[:, k + 1]) / 2
 
             # Lap time: dt = ds / s_dot (midpoint rule, as the dynamics)
-            cost += self.target_weight["w__T"] * (ds_cell / model.s_dot(x_cell, P, rho_cell))
+            cost += weights["w__T"] * (ds_cell / model.s_dot(x_cell, P, rho_cell))
 
             # Dynamics (implicit midpoint)
             opti.subject_to(x_scaled[:, k + 1] - x_scaled[:, k] - ds_cell * SX_inv @ model.f(x_cell, u_unscaled[:, k], P, rho_cell) == 0)
@@ -95,8 +132,8 @@ class MLTS:
             ay_ctrl_dot = (u_unscaled[control_idx["ay_ctrl"], k_next] - u_unscaled[control_idx["ay_ctrl"], k]) / dt_node
 
             # Control rate penalty: W * (u_dot / u_dot_scale)^2 * dt
-            cost += self.target_weight["w__ax"] * (ax_ctrl_dot / self.U_scale["ax_dot_ctrl"]) ** 2 * dt_node
-            cost += self.target_weight["w__ay"] * (ay_ctrl_dot / self.U_scale["ay_dot_ctrl"]) ** 2 * dt_node
+            cost += weights["w__ax"] * (ax_ctrl_dot / self.U_scale["ax_dot_ctrl"]) ** 2 * dt_node
+            cost += weights["w__ay"] * (ay_ctrl_dot / self.U_scale["ay_dot_ctrl"]) ** 2 * dt_node
 
         # Cyclic condition
         opti.subject_to(x_scaled[:, 0] == x_scaled[:, -1])
@@ -119,7 +156,6 @@ class MLTS:
         opti.minimize(cost)
 
         # Initial guess: constant state x0 = [n, Xi, V, ax, ay], controls at steady state (u = a)
-        x0 = np.asarray(x0, dtype=float)
         opti.set_initial(x_scaled, ca.repmat(x0 / x_scale_vec, 1, N + 1))
         opti.set_initial(
             u_scaled[control_idx["ax_ctrl"], :],
@@ -223,6 +259,7 @@ class MLTS:
     #  |_|   |_|  |_| \_/ \__,_|\__\___|
 
     def dynamics(self):
+        """Point mass dynamics in curvilinear coordinates, derivatives w.r.t. s."""
         model = ca.types.SimpleNamespace()
 
         # Curvature
@@ -273,7 +310,24 @@ class MLTS:
 
         return model
 
+    def _build_mesh(self, mesh_type: str, mesh_options: dict) -> tuple[np.ndarray, int]:
+        """Mesh nodes along s and number of cells."""
+        s = self.track_data["s_values"]
+        if mesh_type == "uniform":
+            return mesh.build_uniform_spatial_mesh(
+                s, **{"step_size": 1.0, **mesh_options}
+            )
+        if mesh_type == "dense_start_end":
+            return mesh.build_dense_start_end_mesh(s, **mesh_options)
+        if mesh_type == "time_uniform":
+            kappa = np.array(self.track_data["rho"](s)).squeeze()
+            return mesh.build_time_uniform_mesh(s, kappa, mesh_options)
+        raise ValueError(
+            'mesh_type must be "uniform", "dense_start_end" or "time_uniform"'
+        )
+
     def _load_racetrack(self, track: str | pd.DataFrame) -> dict:
+        """Splines of the track data and borders along s."""
         track = read_track(track)
         abscissa = track["abscissa"].to_numpy()
 
@@ -312,6 +366,7 @@ class MLTS:
         }
 
     def _get_vehicle_data(self, data: dict) -> dict:
+        """Check the vehicle data and fill the defaults."""
         width = data.get("W_total", data.get("vehWidth"))
         if width is None:
             raise KeyError(
