@@ -42,7 +42,7 @@ sol = mlts.solution(x0=[0, 0, 30, 0, 0], step_size=1.0)  # initial guess [n, Xi,
 
 ## Inputs
 
-- **track**: `pytelemsys.pytrack.TrackData`.
+- **track**: path of the track file (tab separated, `#` comments) or `DataFrame` with columns `abscissa`, `curvature`, `dir_mid_line`, `x_mid_line`, `y_mid_line`, `width_no_kerbs_L`, `width_no_kerbs_R`; optional `elevation`, `slope` (positive uphill), `banking` (positive: right side up), default 0.
 - **vehicle** (dict): `W_total` width [m], `v_max` [m/s]; optional `v_min` (5.0), `tau_ax`, `tau_ay` (0.03 s).
 - **ggv**, either:
   - CSV / `DataFrame` with columns `V, ax, ay`: boundary samples at each speed (symmetric in `ay`);

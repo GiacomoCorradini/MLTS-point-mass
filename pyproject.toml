@@ -17,7 +17,6 @@ dependencies = [
     "pandas",
     "matplotlib",
     "casadi",
-    "pytelemsys @ git+https://github.com/GiacomoCorradini/pytelemsys.git",
 ]
 
 [project.optional-dependencies]

@@ -4,8 +4,8 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pytelemsys.pytrack import TrackData
 import MLTS.define_mesh as mesh
+from MLTS import read_track
 
 tracks_dir = os.path.join(os.path.dirname(__file__), "tracks")
 
@@ -15,8 +15,8 @@ if __name__ == "__main__":
     track_file = (
         sys.argv[1] if len(sys.argv) > 1 else os.path.join(tracks_dir, "Catalunya.txt")
     )
-    track = TrackData(track_file).track
-    s, kappa = track.abscissa, track.curvature
+    track = read_track(track_file)
+    s, kappa = track.abscissa.to_numpy(), track.curvature.to_numpy()
 
     # Uniform mesh
     uniform, _ = mesh.build_uniform_spatial_mesh(s, step_size=5.0)

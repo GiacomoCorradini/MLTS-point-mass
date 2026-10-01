@@ -1,12 +1,11 @@
 # %% Setup
 import numpy as np
+import pandas as pd
 import casadi as ca
-
-from pytelemsys.pytrack import TrackData
-from pytelemsys.utils.conversion import darboux_to_cartesian
 
 import MLTS.define_mesh as mesh
 from MLTS.ggv_constr import GGVConstr
+from MLTS.track import read_track, darboux_to_cartesian
 
 
 class MLTS:
@@ -27,7 +26,7 @@ class MLTS:
 
     def __init__(
         self,
-        track: TrackData,
+        track: str | pd.DataFrame,
         vehicle_data: dict,
         ggv_data: dict,
         ggv_scales: np.ndarray | list | None = None,
@@ -274,8 +273,20 @@ class MLTS:
 
         return model
 
-    def _load_racetrack(self, track: TrackData) -> dict:
-        abscissa = track.track.abscissa
+    def _load_racetrack(self, track: str | pd.DataFrame) -> dict:
+        track = read_track(track)
+        abscissa = track["abscissa"].to_numpy()
+
+        # Track borders (without kerbs)
+        mid_line = [
+            track[col].to_numpy()
+            for col in ("x_mid_line", "y_mid_line", "elevation", "dir_mid_line")
+        ]
+        bank, slope = track["banking"].to_numpy(), track["slope"].to_numpy()
+        width_L = track["width_no_kerbs_L"].to_numpy()
+        width_R = track["width_no_kerbs_R"].to_numpy()
+        x_L, y_L, z_L = darboux_to_cartesian(*mid_line, bank, slope, width_L)
+        x_R, y_R, z_R = darboux_to_cartesian(*mid_line, bank, slope, -width_R)
 
         # Create the splines
         spline = lambda name, values: ca.interpolant(
@@ -283,21 +294,21 @@ class MLTS:
         )
         return {
             "s_values": abscissa,
-            "x": spline("x", track.track.x_mid_line),
-            "y": spline("y", track.track.y_mid_line),
-            "z": spline("z", track.track.elevation),
-            "theta": spline("theta", track.track.dir_mid_line),
-            "banking": spline("banking", track.track.banking),
-            "slope": spline("slope", track.track.slope),
-            "rho": spline("rho", track.track.curvature),
-            "n_l": spline("n_l", track.track.width_no_kerbs_L),
-            "n_r": spline("n_r", -track.track.width_no_kerbs_R),
-            "x_margin_L": spline("x_margin_L", track.track.x_margin_no_kerb_L),
-            "y_margin_L": spline("y_margin_L", track.track.y_margin_no_kerb_L),
-            "z_margin_L": spline("z_margin_L", track.track.z_margin_no_kerb_L),
-            "x_margin_R": spline("x_margin_R", track.track.x_margin_no_kerb_R),
-            "y_margin_R": spline("y_margin_R", track.track.y_margin_no_kerb_R),
-            "z_margin_R": spline("z_margin_R", track.track.z_margin_no_kerb_R),
+            "x": spline("x", mid_line[0]),
+            "y": spline("y", mid_line[1]),
+            "z": spline("z", mid_line[2]),
+            "theta": spline("theta", mid_line[3]),
+            "banking": spline("banking", bank),
+            "slope": spline("slope", slope),
+            "rho": spline("rho", track["curvature"].to_numpy()),
+            "n_l": spline("n_l", width_L),
+            "n_r": spline("n_r", -width_R),
+            "x_margin_L": spline("x_margin_L", x_L),
+            "y_margin_L": spline("y_margin_L", y_L),
+            "z_margin_L": spline("z_margin_L", z_L),
+            "x_margin_R": spline("x_margin_R", x_R),
+            "y_margin_R": spline("y_margin_R", y_R),
+            "z_margin_R": spline("z_margin_R", z_R),
         }
 
     def _get_vehicle_data(self, data: dict) -> dict:

@@ -5,8 +5,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pytelemsys.pytrack import TrackData
-from MLTS import MLTS
+from MLTS import MLTS, read_track
 
 data_dir = os.path.join(os.path.dirname(__file__), "vehicle_1")
 
@@ -39,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--save", type=str, help="Save the solution to a .csv file.")
     args = parser.parse_args()
 
-    track_data = TrackData(args.track)
+    track_data = read_track(args.track)
     ggv_data = load_dict(args.ggv)
     vehicle_data = load_dict(args.vehicle)
 
@@ -60,9 +59,9 @@ if __name__ == "__main__":
     fig = plt.figure()
     ax = fig.add_subplot(121, projection="3d")
     ax.plot(
-        track_data.track.x_mid_line,
-        track_data.track.y_mid_line,
-        track_data.track.elevation,
+        track_data.x_mid_line,
+        track_data.y_mid_line,
+        track_data.elevation,
         "k--",
         linewidth=1,
         label="Track centerline",
