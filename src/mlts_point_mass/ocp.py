@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import casadi as ca
 
-import mlts_point_mass.define_mesh as mesh
+import mlts_point_mass.define_mesh as mesh_utils
 from mlts_point_mass.ggv_constr import GGVConstr
 from mlts_point_mass.track import read_track, darboux_to_cartesian
 
@@ -45,20 +45,12 @@ class MLTS:
         self.veh_data = self._get_vehicle_data(vehicle_data)
         self.ggv = GGVConstr(ggv_data, scales=ggv_scales)
 
-    def solution(
-        self,
-        x0,
-        mesh_type="uniform",
-        mesh_options=None,
-        weights=None,
-        ipopt_options=None,
-    ):
+    def solution(self, x0, mesh=1.0, weights=None, ipopt_options=None):
         """Solve the minimum lap time problem.
 
         :param x0: constant initial guess [n, Xi, V, ax, ay].
-        :param mesh_type: "uniform", "dense_start_end" or "time_uniform".
-        :param mesh_options: arguments of the mesh function (see define_mesh),
-            defaults to step_size = 1 m for the uniform mesh.
+        :param mesh: step of a uniform mesh in m, or mesh nodes along s from the
+            track start to its end (e.g. from define_mesh), defaults to 1 m.
         :param weights: cost weights w__T, w__ax, w__ay, merged with target_weight.
         :param ipopt_options: IPOPT options, merged with ipopt_default.
         :return: solution sampled on the mesh (see README).
@@ -70,7 +62,7 @@ class MLTS:
             raise ValueError(f"weights must be among {list(self.target_weight)}")
 
         # Define mesh
-        s_values, N = self._build_mesh(mesh_type, mesh_options or {})
+        s_values, N = self._build_mesh(mesh)
         print(f"Number of mesh points: {N}")
 
         # Define the dynamics model
@@ -310,21 +302,18 @@ class MLTS:
 
         return model
 
-    def _build_mesh(self, mesh_type: str, mesh_options: dict) -> tuple[np.ndarray, int]:
+    def _build_mesh(self, mesh) -> tuple[np.ndarray, int]:
         """Mesh nodes along s and number of cells."""
         s = self.track_data["s_values"]
-        if mesh_type == "uniform":
-            return mesh.build_uniform_spatial_mesh(
-                s, **{"step_size": 1.0, **mesh_options}
-            )
-        if mesh_type == "dense_start_end":
-            return mesh.build_dense_start_end_mesh(s, **mesh_options)
-        if mesh_type == "time_uniform":
-            kappa = np.array(self.track_data["rho"](s)).squeeze()
-            return mesh.build_time_uniform_mesh(s, kappa, mesh_options)
-        raise ValueError(
-            'mesh_type must be "uniform", "dense_start_end" or "time_uniform"'
-        )
+        if np.isscalar(mesh):
+            return mesh_utils.build_uniform_spatial_mesh(s, mesh)
+
+        nodes = np.asarray(mesh, dtype=float)
+        if nodes.ndim != 1 or np.any(np.diff(nodes) <= 0):
+            raise ValueError("mesh nodes must be a strictly increasing 1D array")
+        if not (np.isclose(nodes[0], s[0]) and np.isclose(nodes[-1], s[-1])):
+            raise ValueError(f"mesh nodes must go from s = {s[0]} to s = {s[-1]}")
+        return nodes, nodes.size - 1
 
     def _load_racetrack(self, track: str | pd.DataFrame) -> dict:
         """Splines of the track data and borders along s."""

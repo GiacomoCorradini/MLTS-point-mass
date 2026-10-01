@@ -5,7 +5,15 @@ Minimum lap time of a point mass with a G-G-V constraint, solved as an OCP with 
 ## Installation
 
 ```bash
-pip install -e .
+pip install MLTS-point-mass
+```
+
+The examples (tracks, vehicles, scripts) are in the repository:
+
+```bash
+git clone https://github.com/GiacomoCorradini/MLTS-point-mass.git
+cd MLTS-point-mass
+pip install -e ".[examples]"
 ```
 
 ## Usage
@@ -13,20 +21,27 @@ pip install -e .
 ```bash
 python examples/run_mlts.py examples/tracks/Catalunya.txt   # --ggv, --vehicle, --step, --save sol.csv
 python examples/plot_ggv.py
+python examples/plot_mesh.py
 ```
 
 ```python
-from mlts_point_mass import MLTS
+import json
+from mlts_point_mass import MLTS, read_track
+from mlts_point_mass.define_mesh import build_dense_start_end_mesh
 
-mlts = MLTS(track, vehicle, ggv, ggv_scales=None)
+track = "examples/tracks/Catalunya.txt"
+vehicle = json.load(open("examples/vehicle_1/vehicle.json"))
+ggv = json.load(open("examples/vehicle_1/ggv_envelope.json"))
+
+mlts = MLTS(track, vehicle, ggv)
 sol = mlts.solution(x0=[0, 0, 30, 0, 0])  # initial guess [n, Xi, V, ax, ay]
 
-# Mesh: "uniform" (default, step_size = 1 m), "dense_start_end" or "time_uniform",
-# mesh_options are the arguments of the functions in mlts_point_mass.define_mesh
+# Mesh: uniform step in m (default 1), or nodes built with mlts_point_mass.define_mesh
+s = read_track(track)["abscissa"]
+nodes, _ = build_dense_start_end_mesh(s, coarse_step=5.0, dense_step=1.0)
 sol = mlts.solution(
     x0=[0, 0, 30, 0, 0],
-    mesh_type="dense_start_end",
-    mesh_options={"coarse_step": 5.0, "dense_step": 1.0, "dense_length": 200.0},
+    mesh=nodes,
     weights={"w__ax": 1e-4},  # cost weights: w__T (lap time), w__ax, w__ay (control rate)
 )
 ```

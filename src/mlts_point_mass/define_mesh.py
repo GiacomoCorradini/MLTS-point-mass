@@ -15,6 +15,7 @@ def build_uniform_spatial_mesh(
     if step_size <= 0:
         raise ValueError("step_size must be positive")
 
+    abscissa = np.asarray(abscissa, dtype=float)
     s_start = float(abscissa[0])
     s_end = float(abscissa[-1])
     track_length = s_end - s_start
@@ -47,6 +48,7 @@ def build_dense_start_end_mesh(
     if dense_step <= 0 or coarse_step <= 0:
         raise ValueError("dense_step and coarse_step must be positive")
 
+    abscissa = np.asarray(abscissa, dtype=float)
     s_start = float(abscissa[0])
     s_end = float(abscissa[-1])
 
