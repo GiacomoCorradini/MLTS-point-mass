@@ -1,5 +1,7 @@
 # MLTS-point-mass
 
+[![PyPI](https://img.shields.io/pypi/v/mlts-point-mass)](https://pypi.org/project/mlts-point-mass/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/GiacomoCorradini/MLTS-point-mass/blob/main/LICENSE)
+
 Minimum lap time of a point mass with a G-G-V constraint, solved as an OCP with [CasADi](https://web.casadi.org/) and IPOPT.
 
 ## Installation
