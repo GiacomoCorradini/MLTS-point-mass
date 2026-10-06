@@ -325,6 +325,20 @@ class MLTS:
             track[col].to_numpy()
             for col in ("x_mid_line", "y_mid_line", "elevation", "dir_mid_line")
         ]
+
+        # Check: dC/ds = (cos(theta), sin(theta)), i.e. abscissa = mid-line arc length
+        # and dir_mid_line = its tangent
+        err = np.max(
+            np.hypot(
+                np.gradient(mid_line[0], abscissa) - np.cos(mid_line[3]),
+                np.gradient(mid_line[1], abscissa) - np.sin(mid_line[3]),
+            )
+        )
+        if err > 0.01:
+            print(
+                f"WARNING: track data not consistent, max |dC/ds - tangent| = {err:.3f}"
+            )
+
         bank, slope = track["banking"].to_numpy(), track["slope"].to_numpy()
         width_L = track["width_no_kerbs_L"].to_numpy()
         width_R = track["width_no_kerbs_R"].to_numpy()

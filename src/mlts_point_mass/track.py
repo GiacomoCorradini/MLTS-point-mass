@@ -5,6 +5,8 @@ import pandas as pd
 def read_track(track: str | pd.DataFrame) -> pd.DataFrame:
     """Read the track data, the 3D columns (elevation, slope, banking) default to 0.
 
+    abscissa must be the arc length of the (x, y) mid line, dir_mid_line its tangent.
+
     :param track: path of the track file (tab separated, "#" comments) or DataFrame
         with columns abscissa, curvature, dir_mid_line, x_mid_line, y_mid_line,
         width_no_kerbs_L, width_no_kerbs_R.
